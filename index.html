@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スイスドロー大会</title>
+<style>
+  :root{
+    --bg:#f6f4ef; --card:#fff; --ink:#1f1d1a; --sub:#6b665e; --line:#e3ded4;
+    --acc:#2f5d50; --acc2:#e8f0ec; --warn:#b4462c; --gold:#c9a227; --silver:#9aa1a8; --bronze:#b07a4a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#17181a; --card:#212226; --ink:#eceae5; --sub:#a29d94; --line:#34363b;
+      --acc:#7fc1a9; --acc2:#24332e; --warn:#ef8a6f; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;line-height:1.5}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:.02em}
+  .lead{color:var(--sub);margin:0 0 20px;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .tag{font-size:12px;font-weight:500;color:var(--sub)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=text],input[type=number]{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+  input[type=text]{flex:1;min-width:160px}
+  input[type=number]{width:70px}
+  select{font:inherit;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+  .slots{display:grid;gap:6px}
+  .slots.n2{grid-template-columns:1fr 1fr}
+  button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--acc)}
+  button.primary{background:var(--acc);color:#fff;border-color:var(--acc)}
+  @media (prefers-color-scheme: dark){ button.primary{color:#10201a} }
+  button.danger{color:var(--warn)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 12px;border-radius:999px;background:var(--acc2);font-size:14px}
+  .chip button{padding:0 7px;border:none;background:transparent;color:var(--sub);font-size:15px;line-height:1.4}
+  .chip.late{outline:1px dashed var(--acc)}
+  .muted{color:var(--sub);font-size:13px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  @media (prefers-color-scheme: dark){ .tabs button.on{color:#10201a} }
+  .match{display:grid;grid-template-columns:28px 1fr auto 1fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+  .match:first-child{border-top:none}
+  .tno{color:var(--sub);font-size:13px;text-align:center}
+  .pl{padding:8px 10px;border-radius:8px;border:1px solid var(--line);text-align:center;cursor:pointer;background:var(--bg);user-select:none}
+  .pl small{display:block;color:var(--sub);font-size:11px}
+  .pl.win{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .pl.win small{color:inherit;opacity:.8}
+  .pl.lose{opacity:.5}
+  .pl.locked{cursor:default}
+  .mid{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .mid button{padding:3px 8px;font-size:12px}
+  .mid button.on{background:var(--acc2);border-color:var(--acc)}
+  .side{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .deck{position:relative;border:1.5px dashed var(--line);border-radius:8px;min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;color:var(--sub);text-align:center;padding:6px;background:var(--bg);outline:none;cursor:pointer}
+  .deck:focus,.deck.drag{border-color:var(--acc);background:var(--acc2)}
+  .deck .pick{font-size:12px;padding:3px 10px}
+  .deck.has{padding:0;border-style:solid;overflow:hidden;min-height:0}
+  .deck.has img{display:block;width:100%;max-height:160px;object-fit:cover;cursor:zoom-in}
+  .deck .x{position:absolute;top:4px;right:4px;padding:0 7px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:13px}
+  .deck .ok{position:absolute;left:4px;top:4px;background:var(--acc);color:#fff;border-radius:999px;font-size:11px;padding:0 7px}
+  .lockmsg{grid-column:2 / -1;font-size:12px;color:var(--warn);margin-top:-2px}
+  .match{align-items:start}
+  .mid{padding-top:8px}
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:16px;z-index:10;cursor:zoom-out;flex-direction:column;gap:8px}
+  .lightbox.show{display:flex}
+  .lightbox img{max-width:100%;max-height:88vh;border-radius:6px}
+  .lightbox p{color:#fff;margin:0;font-size:14px}
+  body.ro .edit-only{display:none !important}
+  .robar{display:none;padding:12px 14px;border-radius:10px;background:var(--acc);color:#fff;margin-bottom:16px;font-size:14px;gap:8px;align-items:center;flex-wrap:wrap}
+  @media (prefers-color-scheme: dark){ .robar{color:#10201a} }
+  body.ro .robar{display:flex}
+  .robar b{flex:1;min-width:200px}
+  .robar button{background:rgba(255,255,255,.9);color:#1f1d1a;border:none}
+  .sharebox{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;min-height:0;height:60px;word-break:break-all}
+  .bye{padding:8px 0;border-top:1px solid var(--line);color:var(--sub);font-size:14px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center}
+  th{color:var(--sub);font-weight:500;font-size:12px}
+  td.name{text-align:left;font-weight:600}
+  .rk{display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;font-weight:700}
+  .r1{background:var(--gold);color:#fff}.r2{background:var(--silver);color:#fff}.r3{background:var(--bronze);color:#fff}
+  .hist{font-size:12px;color:var(--sub);text-align:left}
+  textarea{width:100%;min-height:200px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+  .banner{padding:10px 12px;border-radius:8px;background:var(--acc2);font-size:14px;margin-bottom:12px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px}
+  .modal.show{display:flex}
+  .modal .box{background:var(--card);border-radius:12px;padding:20px;max-width:360px;width:100%}
+  .rules{font-size:13px;color:var(--sub);margin:0;padding-left:18px}
+  @media (max-width:560px){ .match{grid-template-columns:22px 1fr auto 1fr;gap:5px} .pl{padding:6px 4px;font-size:13px} .hide-sm{display:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="robar" id="robar"><b>👀 共有された対戦表を閲覧中（閲覧専用）</b>
+    <button id="roImport">この内容を取り込んで編集する</button>
+    <button id="roExit">自分のデータに戻る</button></div>
+  <h1>🏆 スイスドロー大会</h1>
+  <p class="lead">組み合わせを自動作成（全ラウンド一括 or 1ラウンドずつ）→ 勝者をタップ → 全試合終了で最終順位を出力します。下の「共有」から組み合わせを他の人に送れます。</p>
+
+  <!-- メンバー -->
+  <div class="card">
+    <h2>メンバー <span class="tag" id="memberCount"></span></h2>
+    <form class="row edit-only" id="addForm">
+      <input type="text" id="nameInput" placeholder="名前を入力（カンマ・改行区切りで複数追加OK）" autocomplete="off">
+      <button class="primary" type="submit">追加</button>
+    </form>
+    <div class="chips" id="chips"></div>
+    <p class="muted" id="memberNote" style="margin:10px 0 0"></p>
+  </div>
+
+  <!-- 設定・進行 -->
+  <div class="card edit-only">
+    <h2>進行</h2>
+    <div class="row">
+      <label class="muted">ラウンド数 <input type="number" id="roundsInput" min="1" max="20" value="3"></label>
+      <label class="muted">デッキ画像 1人
+        <select id="deckSel"><option value="1">1枚</option><option value="2">2枚</option></select></label>
+      <button class="primary" id="bulkBtn">⚡ 全ラウンドを一括で組む</button>
+      <button id="nextBtn"></button>
+      <button id="randomBtn" title="デッキ画像が揃っている未入力の試合の結果をランダムに決めます">🎲 未入力をランダム決定</button>
+      <button class="danger" id="resetBtn">リセット</button>
+    </div>
+    <p class="muted" id="statusLine" style="margin:10px 0 0"></p>
+  </div>
+
+  <!-- ラウンド -->
+  <div class="card" id="roundCard" style="display:none">
+    <h2>対戦表</h2>
+    <div class="tabs" id="tabs"></div>
+    <div id="roundBody"></div>
+  </div>
+
+  <!-- 順位 -->
+  <div class="card" id="standCard" style="display:none">
+    <h2 id="standTitle">順位表</h2>
+    <div id="finalBanner"></div>
+    <div style="overflow-x:auto"><table id="standTable"></table></div>
+  </div>
+
+  <!-- 出力 -->
+  <div class="card" id="outCard" style="display:none">
+    <h2>結果テキスト出力</h2>
+    <textarea id="outText" readonly></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="primary" id="copyBtn">コピー</button>
+      <span class="muted" id="copyMsg"></span>
+    </div>
+  </div>
+
+  <!-- 共有 -->
+  <div class="card" id="shareCard">
+    <h2>共有</h2>
+    <div id="shareOut" style="display:none">
+      <p class="muted" style="margin:0 0 8px">組み合わせと結果をそのまま他の人に共有できます。相手は<b>閲覧専用</b>で開き、必要なら取り込んで編集できます（デッキ画像は容量の都合で含まれません）。</p>
+      <div class="row">
+        <button class="primary" id="shareLinkBtn">🔗 共有リンクをコピー</button>
+        <button id="shareCodeBtn">📋 共有コードをコピー</button>
+        <span class="muted" id="shareMsg"></span>
+      </div>
+      <textarea class="sharebox" id="shareBox" readonly style="display:none;margin-top:8px"></textarea>
+      <p class="muted" style="margin:8px 0 0;font-size:12px">※ 共有リンクは GitHub Pages など通常のWebページで公開したときに使えます。うまく開けない場合は共有コードを送ってください。結果を更新したら、もう一度共有し直してください。</p>
+    </div>
+    <div class="edit-only" style="margin-top:14px">
+      <p class="muted" style="margin:0 0 6px">共有コードを受け取った場合は、ここに貼り付けて開きます。</p>
+      <div class="row">
+        <input type="text" id="codeIn" placeholder="共有コードを貼り付け" autocomplete="off">
+        <button id="codeOpenBtn">開く</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ルール</h2>
+    <ul class="rules">
+      <li><b>デッキ公開制</b>：ラウンドを組む前に「デッキ画像 1人1枚／2枚」を選びます。各試合、両プレイヤーのデッキ画像をすべて貼るまで勝敗は入力できません。結果入力後は画像の差し替え不可です（取り消すと差し替え可能）。</li>
+      <li>勝ち＝3点、引き分け＝1点、負け＝0点。</li>
+      <li>「⚡ 全ラウンドを一括で組む」では結果を待たずに全ラウンドの組み合わせを先に作ります（再戦なし・不戦勝は重複なし）。この場合、勝ち点による組み分けは行われません。</li>
+      <li>各ラウンドは同じ勝ち点同士で組み、同じ相手との再戦はできるだけ避けます。</li>
+      <li>人数が奇数のときは1人が不戦勝（3点）。同じ人が2回不戦勝にならないようにします。</li>
+      <li>順位：勝ち点 → ブッフホルツ（対戦相手の勝ち点合計）→ 直接対決 → 勝数 の順で比較。</li>
+      <li>大会途中で追加したメンバーは次のラウンドから参加（0点スタート）します。</li>
+    </ul>
+  </div>
+</div>
+
+<input type="file" id="fileIn" accept="image/*" hidden>
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('show')"><img id="lbImg" alt=""><p id="lbCap"></p></div>
+<div class="modal" id="modal"><div class="box">
+  <p id="modalMsg" style="margin-top:0"></p>
+  <div class="row" style="justify-content:flex-end">
+    <button id="modalNo">キャンセル</button>
+    <button class="primary" id="modalYes">OK</button>
+  </div>
+</div></div>
+
+<script>
+const DEFAULT_MEMBERS = ["かいじゅう","かべす","自来也","AnHz","まきちゃ","晴飛","まつぅ","れいん","まみぱんだ","猿山ドパガキング"];
+const KEY = "swiss-draw-v1";
+let S; // state
+let viewRound = 0;
+
+function fresh(){
+  return { players: DEFAULT_MEMBERS.map((n,i)=>({id:i+1,name:n,joined:0})), nextId: DEFAULT_MEMBERS.length+1, totalRounds:3, deckImgs:1, rounds:[] };
+}
+function load(){
+  try{ const t=localStorage.getItem(KEY); if(t){ S=JSON.parse(t); } }catch(e){}
+  if(!S) S=fresh();
+  S.rounds.forEach(r=>r.matches.forEach(m=>{ if(!m.uid) m.uid=newUid(); }));
+}
+const newUid = ()=> "m"+(S.uidSeq=(S.uidSeq||0)+1);
+
+/* ---------- デッキ画像（IndexedDBに保存） ---------- */
+const IMG = {};           // key -> dataURL
+let db = null;
+function idbOpen(){
+  return new Promise(res=>{
+    try{
+      const rq = indexedDB.open("swiss-draw-img",1);
+      rq.onupgradeneeded = ()=> rq.result.createObjectStore("img");
+      rq.onsuccess = ()=>{ db=rq.result; res(); };
+      rq.onerror = ()=> res();
+    }catch(e){ res(); }
+  });
+}
+function idbTx(mode, fn){
+  if(!db) return Promise.resolve();
+  return new Promise(res=>{ try{ const tx=db.transaction("img",mode); const r=fn(tx.objectStore("img")); tx.oncomplete=()=>res(r&&r.result); tx.onerror=()=>res(); }catch(e){ res(); } });
+}
+async function idbLoadAll(){
+  if(!db) return;
+  await new Promise(res=>{ try{
+    const rq = db.transaction("img").objectStore("img").openCursor();
+    rq.onsuccess = ()=>{ const c=rq.result; if(c){ IMG[c.key]=c.value; c.continue(); } else res(); };
+    rq.onerror = ()=> res();
+  }catch(e){ res(); } });
+}
+const nImg = m => m.imgs || 1;
+const imgKey = (m,side,i)=> m.uid+"-"+side+"-"+i;
+const keysOf = m => ["a","b"].flatMap(s=>Array.from({length:nImg(m)},(_,i)=>imgKey(m,s,i)));
+const imgCount = m => keysOf(m).filter(k=>IMG[k]).length;
+const hasDeck = m => imgCount(m)===keysOf(m).length;
+function compress(file){
+  return new Promise((res,rej)=>{
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = ()=>{
+      const MAX=1600, s=Math.min(1, MAX/Math.max(im.width,im.height));
+      const c=document.createElement("canvas"); c.width=Math.round(im.width*s); c.height=Math.round(im.height*s);
+      const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(im,0,0,c.width,c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg",0.82));
+    };
+    im.onerror = ()=>{ URL.revokeObjectURL(url); rej(); };
+    im.src = url;
+  });
+}
+function findMatchByKey(key){
+  for(const r of S.rounds) for(const m of r.matches){ if(key.startsWith(m.uid+"-")) return m; }
+  return null;
+}
+async function putImage(key, file){
+  if(RO) return;
+  if(!file || !file.type.startsWith("image/")) return;
+  const m = findMatchByKey(key); if(!m || m.result) return;
+  try{ IMG[key] = await compress(file); }catch(e){ flashStatus("画像を読み込めませんでした"); return; }
+  idbTx("readwrite", st=>st.put(IMG[key], key));
+  focusKey = key; render();
+}
+function delImage(key){
+  const m = findMatchByKey(key); if(!m || m.result) return;
+  delete IMG[key]; idbTx("readwrite", st=>st.delete(key)); focusKey = key; render();
+}
+function clearImages(){ for(const k in IMG) delete IMG[k]; idbTx("readwrite", st=>st.clear()); }
+let RO = false;          // 共有データ閲覧中（閲覧専用）
+let MY = null;           // 閲覧中に退避した自分のデータ
+function save(){ if(RO) return; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+const byId = id => S.players.find(p=>p.id===id);
+const esc = s => s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- 集計 ---------- */
+function stats(upToRound = S.rounds.length){
+  const st = {};
+  S.players.forEach(p=>st[p.id]={id:p.id,name:p.name,pts:0,w:0,d:0,l:0,byes:0,opps:[],hist:[]});
+  S.rounds.slice(0,upToRound).forEach((r,ri)=>{
+    r.matches.forEach(m=>{
+      const A=st[m.a], B=st[m.b];
+      A.opps.push(m.b); B.opps.push(m.a);
+      if(m.result==="a"){A.pts+=3;A.w++;B.l++;A.hist.push("○"+B.name);B.hist.push("●"+A.name);}
+      else if(m.result==="b"){B.pts+=3;B.w++;A.l++;B.hist.push("○"+A.name);A.hist.push("●"+B.name);}
+      else if(m.result==="draw"){A.pts++;B.pts++;A.d++;B.d++;A.hist.push("△"+B.name);B.hist.push("△"+A.name);}
+      else {A.hist.push("…"+B.name);B.hist.push("…"+A.name);}
+    });
+    if(r.bye!=null && st[r.bye]){ const X=st[r.bye]; X.pts+=3; X.w++; X.byes++; X.hist.push("○不戦勝"); }
+  });
+  Object.values(st).forEach(x=>{ x.buch = x.opps.reduce((s,o)=>s+(st[o]?st[o].pts:0),0); });
+  return st;
+}
+function headToHead(a,b,upTo){
+  let sa=0,sb=0;
+  S.rounds.slice(0,upTo).forEach(r=>r.matches.forEach(m=>{
+    if(m.a===a&&m.b===b){ if(m.result==="a")sa++; if(m.result==="b")sb++; }
+    if(m.a===b&&m.b===a){ if(m.result==="a")sb++; if(m.result==="b")sa++; }
+  }));
+  return sb-sa; // 負ならaが上
+}
+function ranking(upTo = S.rounds.length){
+  const st = stats(upTo);
+  const list = Object.values(st);
+  const cmp = (x,y)=> (y.pts-x.pts) || (y.buch-x.buch) || headToHead(x.id,y.id,upTo) || (y.w-x.w);
+  list.sort((x,y)=> cmp(x,y) || x.id-y.id);
+  // 同順位判定
+  list.forEach((x,i)=>{ x.rank = (i>0 && cmp(list[i-1],x)===0) ? list[i-1].rank : i+1; });
+  return list;
+}
+
+/* ---------- 組み合わせ ---------- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function makePairings(){
+  const st = stats();
+  let pool = shuffle(S.players.map(p=>st[p.id]));
+  pool.sort((x,y)=> (y.pts-x.pts) || (y.buch-x.buch));
+  let bye = null;
+  if(pool.length%2===1){
+    // 不戦勝：まだ不戦勝になっていない、最下位から
+    for(let i=pool.length-1;i>=0;i--){ if(pool[i].byes===0){ bye=pool[i].id; break; } }
+    if(bye==null) bye = pool[pool.length-1].id;
+    pool = pool.filter(x=>x.id!==bye);
+  }
+  const played = (a,b)=> st[a].opps.includes(b);
+  function solve(rest, allowRematch){
+    if(rest.length===0) return [];
+    const [first,...others] = rest;
+    for(let i=0;i<others.length;i++){
+      const o = others[i];
+      if(!allowRematch && played(first.id,o.id)) continue;
+      const sub = solve(others.filter((_,j)=>j!==i), allowRematch);
+      if(sub) return [{a:first.id,b:o.id,result:null}, ...sub];
+    }
+    return null;
+  }
+  const matches = solve(pool,false) || solve(pool,true);
+  matches.forEach(m=>{ m.uid=newUid(); m.imgs=S.deckImgs||1; });
+  return {matches, bye};
+}
+
+/* ---------- 操作 ---------- */
+const started = ()=> S.rounds.length>0;
+const roundDone = r => r.matches.every(m=>m.result);
+const finished = ()=> S.rounds.length>=S.totalRounds && S.rounds.length>0 && S.rounds.every(roundDone);
+const untouched = r => r.matches.every(m=>!m.result && imgCount(m)===0);
+const current = ()=> S.rounds[S.rounds.length-1];
+
+function addMembers(text){
+  if(RO) return;
+  const names = text.split(/[,、，\n]/).map(s=>s.trim()).filter(Boolean);
+  const dup = [];
+  names.forEach(n=>{
+    if(S.players.some(p=>p.name===n)){ dup.push(n); return; }
+    S.players.push({id:S.nextId++, name:n, joined:S.rounds.length});
+  });
+  if(S.bulk && names.length>dup.length){
+    // 一括モード：結果未入力のラウンド（以降すべて）を新メンバー込みで組み直す
+    let k = S.rounds.findIndex((r,i)=> S.rounds.slice(i).every(untouched));
+    if(k<0) k = S.rounds.length;
+    S.players.forEach(p=>{ if(p.joined===S.rounds.length) p.joined=k; });
+    S.rounds = S.rounds.slice(0,k);
+    while(S.rounds.length<S.totalRounds) S.rounds.push(makePairings());
+    if(k>=S.totalRounds) S.players.forEach(p=>{ if(p.joined>=S.totalRounds) p.joined=S.totalRounds; });
+  }
+  save(); render();
+  if(dup.length) flashNote("既に登録済み："+dup.join("、"));
+}
+function removeMember(id){
+  if(RO) return;
+  if(started()) return;
+  S.players = S.players.filter(p=>p.id!==id); save(); render();
+}
+function nextRound(){
+  if(RO) return;
+  if(S.players.length<2) return;
+  if(started() && !roundDone(current())) return;
+  if(S.rounds.length>=S.totalRounds) return;
+  S.rounds.push(makePairings());
+  viewRound = S.rounds.length-1;
+  save(); render();
+}
+function bulkGenerate(){
+  if(RO) return;
+  if(S.players.length<2 || started()) return;
+  S.bulk = true;
+  while(S.rounds.length<S.totalRounds) S.rounds.push(makePairings());
+  viewRound = 0; save(); render();
+}
+function setResult(ri, mi, res){
+  if(RO) return;
+  if(!S.bulk && ri!==S.rounds.length-1) return; // 過去ラウンドは変更しない（組み合わせ整合性のため）
+  const m = S.rounds[ri].matches[mi];
+  if(!hasDeck(m)) return; // デッキ画像が揃うまで入力不可
+  m.result = (m.result===res) ? null : res;
+  save(); render();
+}
+function randomFill(){
+  if(RO) return;
+  if(!started()) return;
+  (S.bulk?S.rounds:[current()]).forEach(r=>r.matches.forEach(m=>{ if(!m.result && hasDeck(m)) m.result = Math.random()<0.5?"a":"b"; }));
+  save(); render();
+}
+function autoAll(){
+  if(S.players.length<2) return;
+  if(!started()) S.rounds.push(makePairings());
+  while(true){
+    randomFill();
+    if(S.rounds.length>=S.totalRounds) break;
+    S.rounds.push(makePairings());
+  }
+  viewRound = S.rounds.length-1; save(); render();
+}
+
+/* ---------- 描画 ---------- */
+function render(){
+  document.body.classList.toggle("ro", RO);
+  document.getElementById("shareOut").style.display = (started() && !RO) ? "" : "none";
+  document.getElementById("shareCard").style.display = (RO) ? "none" : "";
+  const st = stats();
+  // メンバー
+  document.getElementById("memberCount").textContent = S.players.length+"人";
+  document.getElementById("chips").innerHTML = S.players.map(p=>
+    `<span class="chip ${p.joined>0?'late':''}" title="${p.joined>0?'R'+(p.joined+1)+'から参加':''}">${esc(p.name)}${(started()||RO)?'':`<button aria-label="削除" onclick="removeMember(${p.id})">×</button>`}</span>`
+  ).join("");
+  document.getElementById("memberNote").textContent = RO ? "" : started()
+    ? (S.bulk ? "一括モード中に追加すると、結果未入力のラウンドを新メンバー込みで組み直します（点線は途中参加）。"
+              : "大会中に追加したメンバーは次のラウンドから参加します（点線は途中参加）。")
+    : (S.players.length%2 ? "奇数人数のため、各ラウンド1人が不戦勝になります。" : "");
+
+  // 進行
+  const ri = document.getElementById("roundsInput");
+  ri.value = S.totalRounds; ri.disabled = started();
+  const ds = document.getElementById("deckSel");
+  ds.value = String(S.deckImgs||1);
+  ds.disabled = started() && (S.bulk || S.rounds.length>=S.totalRounds);
+  const nb = document.getElementById("nextBtn");
+  const cur = current();
+  const bb = document.getElementById("bulkBtn");
+  bb.style.display = started() ? "none" : ""; bb.disabled = S.players.length<2;
+  nb.style.display = S.bulk ? "none" : "";
+  if(!started()){ nb.textContent="▶ 1ラウンドずつ組む"; nb.disabled=S.players.length<2; }
+  else if(finished()){ nb.textContent="大会終了"; nb.disabled=true; }
+  else if(S.rounds.length>=S.totalRounds){ nb.textContent="結果を入力してください"; nb.disabled=true; }
+  else { nb.textContent=`▶ 第${S.rounds.length+1}ラウンドを組む`; nb.disabled=!roundDone(cur); }
+  document.getElementById("randomBtn").disabled = !started() || (S.bulk ? finished() : roundDone(cur));
+  let status;
+  if(!started()) status = `${S.players.length}人・全${S.totalRounds}ラウンドで開始できます。`;
+  else if(finished()) status = "全ラウンド終了！最終結果を出力しました。";
+  else {
+    const rs = S.bulk ? S.rounds : [cur];
+    const left = rs.reduce((s,r)=>s+r.matches.filter(m=>!m.result).length,0);
+    const noDeck = rs.reduce((s,r)=>s+r.matches.filter(m=>!hasDeck(m)).length,0);
+    status = (S.bulk ? `全${S.totalRounds}ラウンド作成済み　` : `第${S.rounds.length}ラウンド / 全${S.totalRounds}ラウンド　`)
+      + (left?`未入力 ${left}試合`:"全試合入力済み") + (noDeck?`（うちデッキ画像待ち ${noDeck}試合）`:"");
+  }
+  document.getElementById("statusLine").textContent = status;
+
+  // ラウンド
+  const rc = document.getElementById("roundCard");
+  rc.style.display = started() ? "" : "none";
+  if(started()){
+    viewRound = Math.min(viewRound, S.rounds.length-1);
+    document.getElementById("tabs").innerHTML = S.rounds.map((_,i)=>
+      `<button class="${i===viewRound?'on':''}" onclick="viewRound=${i};render()">第${i+1}ラウンド${roundDone(S.rounds[i])?' ✓':''}</button>`).join("");
+    const r = S.rounds[viewRound];
+    const before = stats(viewRound);
+    const editable = !RO && (S.bulk || viewRound===S.rounds.length-1);
+    const deckSlots = (id,side,m)=>{
+      if(RO) return "";
+      const n = nImg(m);
+      return `<div class="slots n${n}">` + Array.from({length:n},(_,i)=>deckSlot(id,side,m,i,n)).join("") + `</div>`;
+    };
+    const deckSlot = (id,side,m,i,n)=>{
+      const key = imgKey(m,side,i), src = IMG[key], lab = n>1?` ${i+1}`:"";
+      const canEdit = editable && !m.result;
+      if(src) return `<div class="deck has" tabindex="0" data-key="${key}" data-name="${esc(byId(id).name)}のデッキ${lab}">
+          <img src="${src}" alt="${esc(byId(id).name)}のデッキ${lab}" data-zoom="1">
+          <span class="ok">提出済</span>${canEdit?`<button class="x" data-del="1" title="画像を削除">×</button>`:""}</div>`;
+      if(!canEdit) return `<div class="deck" style="cursor:default">デッキ画像なし</div>`;
+      return `<div class="deck" tabindex="0" data-key="${key}">📷 デッキ${lab}
+          <button class="pick" data-pick="1">画像を選ぶ</button>
+          <span>ドロップ / Ctrl+V</span></div>`;
+    };
+    const cell = (id,side,m,mi)=>{
+      const cls = m.result===side?"win":(m.result&&m.result!=="draw"?"lose":"");
+      const lock = !editable || !hasDeck(m);
+      return `<div class="side"><div class="pl ${cls} ${lock?'locked':''}" onclick="setResult(${viewRound},${mi},'${side}')">${esc(byId(id).name)}<small>${before[id].pts}点</small></div>${deckSlots(id,side,m)}</div>`;
+    };
+    document.getElementById("roundBody").innerHTML =
+      (editable?`<p class="muted" style="margin:0 0 6px">このラウンドはデッキ画像 <b>1人${nImg(r.matches[0]||{})}枚</b>。両者の画像をすべて貼ると勝敗を入力できます。勝った方をタップ（もう一度タップで取り消し）。画像クリックで拡大。</p>`:"") +
+      r.matches.map((m,mi)=>{
+        const ready = hasDeck(m);
+        return `<div class="match"><div class="tno">${mi+1}</div>${cell(m.a,'a',m,mi)}
+        <div class="mid"><span class="muted">vs</span>${editable?`<button class="${m.result==='draw'?'on':''}" ${ready?'':'disabled'} onclick="setResult(${viewRound},${mi},'draw')">引分</button>`:(m.result==='draw'?'<span class="muted">引分</span>':'')}</div>
+        ${cell(m.b,'b',m,mi)}${editable&&!ready?`<div class="lockmsg">🔒 デッキ画像 ${imgCount(m)}/${keysOf(m).length} 枚 — すべてそろうと入力できます</div>`:""}</div>`;
+      }).join("") +
+      (r.bye!=null?`<div class="bye">🟢 不戦勝：<b>${esc(byId(r.bye).name)}</b></div>`:"");
+    if(focusKey){ const el=document.querySelector(`.deck[data-key="${focusKey}"]`); if(el) el.focus({preventScroll:true}); focusKey=null; }
+  }
+
+  // 順位
+  const sc = document.getElementById("standCard");
+  sc.style.display = started() ? "" : "none";
+  if(started()){
+    const fin = finished();
+    document.getElementById("standTitle").textContent = fin ? "🏁 最終順位" : "現在の順位";
+    const rk = ranking();
+    document.getElementById("finalBanner").innerHTML = fin
+      ? `<div class="banner">🥇 優勝は <b>${esc(rk.filter(x=>x.rank===1).map(x=>x.name).join("・"))}</b>！</div>` : "";
+    document.getElementById("standTable").innerHTML =
+      `<tr><th>順位</th><th style="text-align:left">名前</th><th>勝点</th><th>勝-分-敗</th><th>BH</th><th class="hide-sm" style="text-align:left">対戦履歴</th></tr>` +
+      rk.map(x=>`<tr><td><span class="rk ${x.rank<=3?'r'+x.rank:''}">${x.rank}</span></td><td class="name">${esc(x.name)}</td>
+        <td><b>${x.pts}</b></td><td>${x.w}-${x.d}-${x.l}</td><td>${x.buch}</td><td class="hist hide-sm">${x.hist.map(esc).join(" / ")}</td></tr>`).join("");
+  }
+
+  // 出力
+  const oc = document.getElementById("outCard");
+  oc.style.display = started() ? "" : "none";
+  if(started()) document.getElementById("outText").value = buildText();
+}
+
+function buildText(){
+  const L = [];
+  L.push(`【スイスドロー大会 結果】${finished()?"":"（途中経過）"}`);
+  L.push(`参加者 ${S.players.length}人 / 全${S.totalRounds}ラウンド`);
+  S.rounds.forEach((r,i)=>{
+    L.push(""); L.push(`■ 第${i+1}ラウンド`);
+    r.matches.forEach((m,mi)=>{
+      const a=byId(m.a).name, b=byId(m.b).name;
+      let s = m.result==="a"?`${a} ○-● ${b}`:m.result==="b"?`${a} ●-○ ${b}`:m.result==="draw"?`${a} △-△ ${b}`:`${a} vs ${b}（${RO||hasDeck(m)?"未入力":"デッキ画像待ち"}）`;
+      L.push(`  卓${mi+1}: ${s}`);
+    });
+    if(r.bye!=null) L.push(`  不戦勝: ${byId(r.bye).name}`);
+  });
+  L.push(""); L.push(finished()?"■ 最終順位":"■ 現在の順位");
+  ranking().forEach(x=> L.push(`  ${String(x.rank).padStart(2," ")}位 ${x.name}　${x.pts}点（${x.w}勝${x.d}分${x.l}敗 / BH ${x.buch}）`));
+  return L.join("\n");
+}
+
+/* ---------- UI ---------- */
+let noteTimer;
+function flashNote(t){ const n=document.getElementById("memberNote"); n.textContent=t; clearTimeout(noteTimer); noteTimer=setTimeout(render,2500); }
+function ask(msg, yes){
+  const m=document.getElementById("modal"); document.getElementById("modalMsg").textContent=msg; m.classList.add("show");
+  document.getElementById("modalYes").onclick=()=>{m.classList.remove("show");yes();};
+  document.getElementById("modalNo").onclick=()=>m.classList.remove("show");
+}
+document.getElementById("addForm").addEventListener("submit",e=>{
+  e.preventDefault(); const i=document.getElementById("nameInput"); if(i.value.trim()){ addMembers(i.value); i.value=""; } i.focus();
+});
+document.getElementById("nameInput").addEventListener("paste",e=>{
+  const t=(e.clipboardData||window.clipboardData).getData("text"); if(t.includes("\n")){ e.preventDefault(); addMembers(t); }
+});
+document.getElementById("roundsInput").addEventListener("change",e=>{
+  const v=Math.max(1,Math.min(20,parseInt(e.target.value)||3)); S.totalRounds=v; save(); render();
+});
+document.getElementById("nextBtn").onclick=nextRound;
+document.getElementById("deckSel").addEventListener("change",e=>{ S.deckImgs = e.target.value==="2"?2:1; save(); render(); });
+document.getElementById("bulkBtn").onclick=bulkGenerate;
+document.getElementById("randomBtn").onclick=randomFill;
+document.getElementById("resetBtn").onclick=()=>ask("大会をリセットしますか？",()=>{
+  ask("メンバーも初期の10人に戻しますか？（キャンセルでメンバーは維持）",()=>{S=fresh();viewRound=0;clearImages();save();render();});
+  clearImages(); S.rounds=[]; S.bulk=false; S.players.forEach(p=>p.joined=0); viewRound=0; save(); render();
+});
+document.getElementById("copyBtn").onclick=async()=>{
+  const t=document.getElementById("outText"), msg=document.getElementById("copyMsg");
+  try{ await navigator.clipboard.writeText(t.value); msg.textContent="コピーしました"; }
+  catch(e){ t.select(); msg.textContent="選択しました。Ctrl+C / ⌘+C でコピーしてください"; }
+  setTimeout(()=>msg.textContent="",2500);
+};
+
+let focusKey = null, pickKey = null;
+function flashStatus(t){ const n=document.getElementById("statusLine"); n.textContent=t; setTimeout(render,2500); }
+const body = document.getElementById("roundBody");
+body.addEventListener("click", e=>{
+  const deck = e.target.closest(".deck[data-key]"); if(!deck) return;
+  const key = deck.dataset.key;
+  if(e.target.dataset.del){ e.stopPropagation(); delImage(key); return; }
+  if(e.target.dataset.zoom){
+    document.getElementById("lbImg").src = e.target.src;
+    document.getElementById("lbCap").textContent = deck.dataset.name;
+    document.getElementById("lightbox").classList.add("show"); return;
+  }
+  if(e.target.dataset.pick){ pickKey = key; const f=document.getElementById("fileIn"); f.value=""; f.click(); return; }
+  deck.focus();
+});
+document.getElementById("fileIn").addEventListener("change", e=>{ if(pickKey && e.target.files[0]) putImage(pickKey, e.target.files[0]); });
+body.addEventListener("dragover", e=>{ const d=e.target.closest(".deck[data-key]"); if(d){ e.preventDefault(); d.classList.add("drag"); } });
+body.addEventListener("dragleave", e=>{ const d=e.target.closest(".deck[data-key]"); if(d) d.classList.remove("drag"); });
+body.addEventListener("drop", e=>{
+  const d=e.target.closest(".deck[data-key]"); if(!d) return; e.preventDefault(); d.classList.remove("drag");
+  const f=[...e.dataTransfer.files].find(f=>f.type.startsWith("image/")); if(f) putImage(d.dataset.key, f);
+});
+document.addEventListener("paste", e=>{
+  const d = document.activeElement && document.activeElement.closest && document.activeElement.closest(".deck[data-key]");
+  if(!d) return;
+  const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type.startsWith("image/"));
+  if(it){ e.preventDefault(); putImage(d.dataset.key, it.getAsFile()); }
+});
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") document.getElementById("lightbox").classList.remove("show"); });
+
+/* ---------- 共有 ---------- */
+const RES = [null,"a","b","draw"];
+function pack(st){
+  return {v:1, t:st.totalRounds, d:st.deckImgs||1, b:st.bulk?1:0,
+    p: st.players.map(x=>[x.id,x.name,x.joined||0]),
+    r: st.rounds.map(r=>({m:r.matches.map(m=>[m.a,m.b,RES.indexOf(m.result||null),m.imgs||1]), y:r.bye}))};
+}
+function unpack(o){
+  if(!o || o.v!==1 || !Array.isArray(o.p)) throw 0;
+  const st = {players:o.p.map(([id,name,joined])=>({id,name:String(name),joined})), totalRounds:o.t||3, deckImgs:o.d||1, bulk:!!o.b, uidSeq:0, rounds:[]};
+  st.nextId = Math.max(0,...st.players.map(x=>x.id))+1;
+  st.rounds = (o.r||[]).map(r=>({bye:r.y??null, matches:r.m.map(([a,b,res,imgs])=>({a,b,result:RES[res]||null,imgs:imgs||1,uid:"m"+(++st.uidSeq)}))}));
+  return st;
+}
+const b64u = bytes => { let s=""; bytes.forEach(c=>s+=String.fromCharCode(c)); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); };
+const unb64u = str => { str=str.replace(/-/g,"+").replace(/_/g,"/"); const s=atob(str); return Uint8Array.from(s,c=>c.charCodeAt(0)); };
+async function encode(st){
+  const raw = new TextEncoder().encode(JSON.stringify(pack(st)));
+  if(window.CompressionStream){
+    try{ const buf = await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer();
+      return "z"+b64u(new Uint8Array(buf)); }catch(e){}
+  }
+  return "j"+b64u(raw);
+}
+async function decode(code){
+  code = code.trim().replace(/^.*#s=/,"");
+  const kind = code[0], bytes = unb64u(code.slice(1));
+  let txt;
+  if(kind==="z"){ const buf = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer(); txt = new TextDecoder().decode(buf); }
+  else if(kind==="j"){ txt = new TextDecoder().decode(bytes); }
+  else throw 0;
+  return unpack(JSON.parse(txt));
+}
+function shareUrl(code){ return location.href.split("#")[0] + "#s=" + code; }
+async function copyOut(text, label){
+  const box=document.getElementById("shareBox"), msg=document.getElementById("shareMsg");
+  box.value = text; box.style.display = "";
+  try{ await navigator.clipboard.writeText(text); msg.textContent = label+"をコピーしました"; }
+  catch(e){ box.select(); msg.textContent = "下の枠を選択してコピーしてください"; }
+  setTimeout(()=>msg.textContent="",3000);
+}
+document.getElementById("shareLinkBtn").onclick = async()=> copyOut(shareUrl(await encode(S)), "共有リンク");
+document.getElementById("shareCodeBtn").onclick = async()=> copyOut(await encode(S), "共有コード");
+function enterRO(st){ if(!RO) MY = S; S = st; RO = true; viewRound = 0; window.scrollTo(0,0); render(); }
+function exitRO(){
+  RO = false; S = MY || S; MY = null; viewRound = S.rounds.length ? S.rounds.length-1 : 0;
+  try{ history.replaceState(null,"",location.href.split("#")[0]); }catch(e){}
+  render();
+}
+document.getElementById("codeOpenBtn").onclick = async()=>{
+  const v = document.getElementById("codeIn").value; if(!v.trim()) return;
+  try{ enterRO(await decode(v)); document.getElementById("codeIn").value=""; }
+  catch(e){ ask("共有コードを読み込めませんでした。コードが途中で切れていないか確認してください。",()=>{}); }
+};
+document.getElementById("roExit").onclick = exitRO;
+document.getElementById("roImport").onclick = ()=> ask("この共有データを取り込みますか？今このブラウザにある大会データ（デッキ画像を含む）は上書きされます。", ()=>{
+  const st = S; RO = false; MY = null; S = st; clearImages(); save();
+  try{ history.replaceState(null,"",location.href.split("#")[0]); }catch(e){}
+  viewRound = S.rounds.length ? S.rounds.length-1 : 0; render();
+});
+async function checkHash(){
+  const m = location.hash.match(/^#s=(.+)$/);
+  if(m){ try{ enterRO(await decode(m[1])); }catch(e){ ask("共有リンクを読み込めませんでした。",()=>{}); } }
+}
+window.addEventListener("hashchange", checkHash);
+
+load(); render();
+idbOpen().then(idbLoadAll).then(()=>{ if(!RO) render(); });
+checkHash();
+</script>
+</body>
+</html>
